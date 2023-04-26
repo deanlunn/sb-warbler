@@ -8,6 +8,7 @@ from flask_sqlalchemy import SQLAlchemy
 bcrypt = Bcrypt()
 db = SQLAlchemy()
 
+
 class Follows(db.Model):
     """Connection of a follower <-> followed_user."""
 
@@ -43,8 +44,9 @@ class Likes(db.Model):
 
     message_id = db.Column(
         db.Integer,
-        db.ForeignKey('messages.id', ondelete='cascade'),
+        db.ForeignKey('messages.id', ondelete='cascade')
     )
+
 
 
 class User(db.Model):
@@ -169,14 +171,13 @@ class User(db.Model):
 
 
 class Message(db.Model):
-    """Warble."""
+    """An individual message ("warble")."""
 
     __tablename__ = 'messages'
 
     id = db.Column(
         db.Integer,
         primary_key=True,
-        autoincrement=True,
     )
 
     text = db.Column(
@@ -198,7 +199,7 @@ class Message(db.Model):
 
     user = db.relationship('User')
 
-    
+
 def connect_db(app):
     """Connect this database to provided Flask app.
 

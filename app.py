@@ -1,10 +1,10 @@
 import os
-import pdb
+
 from flask import Flask, render_template, request, flash, redirect, session, g, abort
 from flask_debugtoolbar import DebugToolbarExtension
 from sqlalchemy.exc import IntegrityError
 
-from forms import UserAddForm, LoginForm, MessageForm, UserEditForm
+from forms import UserAddForm, UserEditForm, LoginForm, MessageForm
 from models import db, connect_db, User, Message
 
 CURR_USER_KEY = "curr_user"
@@ -19,9 +19,9 @@ app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get(
 
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SQLALCHEMY_ECHO"] = False
-app.config["DEBUG_TB_INTERCEPT_REDIRECTS"] = True
+app.config["DEBUG_TB_INTERCEPT_REDIRECTS"] = False
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "it's a secret")
-toolbar = DebugToolbarExtension(app)
+# toolbar = DebugToolbarExtension(app)
 
 connect_db(app)
 
@@ -33,7 +33,7 @@ connect_db(app)
 @app.before_request
 def add_user_to_g():
     """If we're logged in, add curr user to Flask global."""
-    # pdb.set_trace()
+
     if CURR_USER_KEY in session:
         g.user = User.query.get(session[CURR_USER_KEY])
 
@@ -79,7 +79,7 @@ def signup():
             )
             db.session.commit()
 
-        except IntegrityError:
+        except IntegrityError as e:
             flash("Username already taken", "danger")
             return render_template("users/signup.html", form=form)
 
@@ -115,7 +115,8 @@ def logout():
     """Handle logout of user."""
 
     do_logout()
-    flash("You have been logged out.", "success")
+
+    flash("You have successfully logged out.", "success")
     return redirect("/login")
 
 
@@ -145,7 +146,6 @@ def users_show(user_id):
     """Show user profile."""
 
     user = User.query.get_or_404(user_id)
-
     # snagging messages in order from the database;
     # user.messages won't be in order by default
     messages = (
@@ -155,7 +155,7 @@ def users_show(user_id):
         .all()
     )
     likes = [message.id for message in user.likes]
-    return render_template("users/show.html", user=user, messages=messages)
+    return render_template("users/show.html", user=user, messages=messages, likes=likes)
 
 
 @app.route("/users/<int:user_id>/following")
@@ -247,7 +247,7 @@ def add_like(message_id):
 
 
 @app.route("/users/profile", methods=["GET", "POST"])
-def profile():
+def edit_profile():
     """Update profile for current user."""
 
     if not g.user:
@@ -269,10 +269,10 @@ def profile():
 
             db.session.commit()
             return redirect(f"/users/{user.id}")
-        else:
-            flash("Incorrect password", "danger")
 
-    return render_template("users/edit.html", form=form, user=user)
+        flash("Wrong password, please try again.", "danger")
+
+    return render_template("users/edit.html", form=form, user_id=user.id)
 
 
 @app.route("/users/delete", methods=["POST"])
@@ -322,7 +322,7 @@ def messages_add():
 def messages_show(message_id):
     """Show a message."""
 
-    msg = Message.query.get(message_id)
+    msg = Message.query.get_or_404(message_id)
     return render_template("messages/show.html", message=msg)
 
 
